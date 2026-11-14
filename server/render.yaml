@@ -1,0 +1,15 @@
+# Publicação no Render (render.com) — um serviço só: serve o jogo E o multiplayer (WebSocket).
+# No painel do Render: New > Blueprint > escolha este repositório. Ou New > Web Service com:
+#   Build Command: cd server && npm install
+#   Start Command: node server/server.js
+services:
+  - type: web
+    name: la-velada-boxing
+    runtime: node
+    plan: free
+    buildCommand: cd server && npm install --omit=dev
+    startCommand: node server/server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

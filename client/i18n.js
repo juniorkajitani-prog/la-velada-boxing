@@ -1,0 +1,276 @@
+// Idiomas do jogo: Português (pt) e Español (es).
+// Textos fixos do HTML usam data-i18n="chave" (innerHTML), data-i18n-title, data-i18n-placeholder
+// e data-i18n-aria. Textos montados no JS usam I18N.t("chave", {variáveis}).
+const I18N = (() => {
+  const DICT = {
+    pt: {
+      "lang.label": "Idioma",
+      "title.play": "Jogar",
+      "title.settings": "Configurações",
+      "sound.on": "🔊 Som: ligado",
+      "sound.off": "🔇 Som: desligado",
+      "sound.toggle": "Ativar/desativar som",
+      "mode.choose": "Escolha o modo",
+      "mode.mp": "Multiplayer Online",
+      "mode.mp.desc": "Crie ou entre numa sala privada com outra pessoa, em qualquer dispositivo.",
+      "mode.training": "Treinamento",
+      "mode.training.desc": "Lute contra a IA em fácil, médio ou difícil.",
+      "mode.local": "2 Jogadores (local)",
+      "mode.local.desc": "Dois lutadores no mesmo teclado.",
+      "mode.tournament": "Torneio",
+      "mode.tournament.desc": "Chaveamento com os 9 lutadores até a grande final.",
+      "mode.tournament.soon": "Torneio: em desenvolvimento nesta primeira versão. Use Treinamento ou Multiplayer por enquanto.",
+      "back": "Voltar",
+      "exit": "Sair",
+      "mp.create": "Criar sala",
+      "mp.create.desc": "Gera um código e um link para enviar ao outro jogador.",
+      "mp.create.btn": "Criar sala privada",
+      "mp.join": "Entrar com código",
+      "mp.code": "CÓDIGO",
+      "mp.join.btn": "Entrar na sala",
+      "mp.connecting": "Conectando...",
+      "mp.noServer": "Não foi possível conectar ao servidor multiplayer.",
+      "mp.joinError": "Erro ao entrar na sala.",
+      "mp.err.notFound": "Sala não encontrada.",
+      "mp.err.full": "Sala cheia.",
+      "mp.opponentLeft": "O outro jogador saiu da sala.",
+      "mp.room": "Sala",
+      "mp.copyLink": "Copiar link de convite",
+      "mp.linkCopied": "Link copiado: {url}",
+      "mp.both": "Os dois jogadores conectados. Escolhendo personagens...",
+      "mp.waitConfirm": "Aguardando o outro jogador confirmar...",
+      "player": "Jogador",
+      "player1": "Jogador 1",
+      "player2": "Jogador 2",
+      "you": "Você",
+      "ai": "IA",
+      "diff.easy": "Fácil",
+      "diff.medium": "Médio",
+      "diff.hard": "Difícil",
+      "diff.label": "Dificuldade:",
+      "char.choose": "Escolha seu lutador",
+      "char.chooseTraining": "Escolha seu lutador — Treinamento",
+      "char.p1": "Jogador 1 — escolha seu lutador",
+      "char.p2": "Jogador 2 — escolha seu lutador",
+      "char.confirm": "Confirmar / Pronto",
+      "stat.strength": "Força",
+      "stat.speed": "Velocidade",
+      "stat.dodge": "Esquiva",
+      "stat.endurance": "Resistência",
+      "stat.cardio": "Fôlego",
+      "stat.accuracy": "Precisão",
+      "fight.pause": "⏸ PAUSAR",
+      "fight.pauseTitle": "Pausar (P ou Esc)",
+      "fight.quit": "✕ SAIR",
+      "fight.quitTitle": "Sair da partida",
+      "pause.title": "PAUSADO",
+      "pause.sub": "A luta está parada.",
+      "pause.menu": "MENU",
+      "pause.online": "Partida online: a luta continua rolando. Se sair, o adversário vence por abandono.",
+      "pause.resume": "▶ CONTINUAR",
+      "pause.quit": "✕ SAIR DA PARTIDA",
+      "kd.count": "NOCAUTE! O juiz está contando até 10...",
+      "kd.ko": "NOCAUTE!",
+      "kd.koText": "Fim de luta por nocaute.",
+      "fight.go": "LUTA!",
+      "mc.move": "MOVIMENTAÇÃO<small>ESQUERDA / DIREITA</small>",
+      "mc.left": "IR PARA<br>ESQUERDA",
+      "mc.right": "IR PARA<br>DIREITA",
+      "mc.leftAria": "Ir para esquerda",
+      "mc.rightAria": "Ir para direita",
+      "mc.combat": "AÇÕES DE COMBATE",
+      "mc.guard": "DEFESA",
+      "mc.guardAria": "Defesa",
+      "mc.punchL": "SOCO<br>ESQUERDO",
+      "mc.punchLAria": "Soco esquerdo",
+      "mc.punchR": "SOCO<br>DIREITO",
+      "mc.punchRAria": "Soco direito",
+      "rotate": "Gire o celular na horizontal para lutar",
+      "post.win": "Vitória!",
+      "post.won": "{name} venceu!",
+      "post.method": "Método: {method}",
+      "post.draw": "Empate!",
+      "post.drawSub": "Nenhum lutador venceu — placar igual.",
+      "post.rematch": "Revanche",
+      "post.change": "Trocar personagem",
+      "method.Nocaute": "Nocaute",
+      "method.Decisão": "Decisão",
+      "method.Empate": "Empate",
+      "method.Abandono": "Abandono",
+      "help.title": "Controles",
+      "help.desktop": "Computador",
+      "help.desktopList": "<li>A / D — mover</li><li>Clique esquerdo — Soco esquerdo (jab)</li><li>Clique direito — Soco direito (direto)</li><li>Q — Gancho esquerdo</li><li>E — Gancho direito</li><li>F (segurar) — Defesa</li><li>Espaço — Esquiva</li><li>Shift — Avanço rápido</li><li>R — Especial</li><li>T — Provocar</li><li>Esc ou P — Pausar</li>",
+      "help.mobile": "Celular",
+      "help.mobileText": "Setas azuis para andar (segure), Defesa, Soco Esquerdo e Soco Direito. Os botões também funcionam com o mouse.",
+    },
+    es: {
+      "lang.label": "Idioma",
+      "title.play": "Jugar",
+      "title.settings": "Ajustes",
+      "sound.on": "🔊 Sonido: activado",
+      "sound.off": "🔇 Sonido: desactivado",
+      "sound.toggle": "Activar/desactivar sonido",
+      "mode.choose": "Elige el modo",
+      "mode.mp": "Multijugador Online",
+      "mode.mp.desc": "Crea o entra a una sala privada con otra persona, en cualquier dispositivo.",
+      "mode.training": "Entrenamiento",
+      "mode.training.desc": "Pelea contra la IA en fácil, medio o difícil.",
+      "mode.local": "2 Jugadores (local)",
+      "mode.local.desc": "Dos peleadores en el mismo teclado.",
+      "mode.tournament": "Torneo",
+      "mode.tournament.desc": "Llaves con los 9 peleadores hasta la gran final.",
+      "mode.tournament.soon": "Torneo: en desarrollo en esta primera versión. Usa Entrenamiento o Multijugador por ahora.",
+      "back": "Volver",
+      "exit": "Salir",
+      "mp.create": "Crear sala",
+      "mp.create.desc": "Genera un código y un enlace para enviar al otro jugador.",
+      "mp.create.btn": "Crear sala privada",
+      "mp.join": "Entrar con código",
+      "mp.code": "CÓDIGO",
+      "mp.join.btn": "Entrar a la sala",
+      "mp.connecting": "Conectando...",
+      "mp.noServer": "No se pudo conectar al servidor multijugador.",
+      "mp.joinError": "Error al entrar a la sala.",
+      "mp.err.notFound": "Sala no encontrada.",
+      "mp.err.full": "Sala llena.",
+      "mp.opponentLeft": "El otro jugador salió de la sala.",
+      "mp.room": "Sala",
+      "mp.copyLink": "Copiar enlace de invitación",
+      "mp.linkCopied": "Enlace copiado: {url}",
+      "mp.both": "Los dos jugadores conectados. Eligiendo personajes...",
+      "mp.waitConfirm": "Esperando a que el otro jugador confirme...",
+      "player": "Jugador",
+      "player1": "Jugador 1",
+      "player2": "Jugador 2",
+      "you": "Tú",
+      "ai": "IA",
+      "diff.easy": "Fácil",
+      "diff.medium": "Medio",
+      "diff.hard": "Difícil",
+      "diff.label": "Dificultad:",
+      "char.choose": "Elige tu peleador",
+      "char.chooseTraining": "Elige tu peleador — Entrenamiento",
+      "char.p1": "Jugador 1 — elige tu peleador",
+      "char.p2": "Jugador 2 — elige tu peleador",
+      "char.confirm": "Confirmar / Listo",
+      "stat.strength": "Fuerza",
+      "stat.speed": "Velocidad",
+      "stat.dodge": "Esquiva",
+      "stat.endurance": "Resistencia",
+      "stat.cardio": "Aguante",
+      "stat.accuracy": "Precisión",
+      "fight.pause": "⏸ PAUSA",
+      "fight.pauseTitle": "Pausar (P o Esc)",
+      "fight.quit": "✕ SALIR",
+      "fight.quitTitle": "Salir de la partida",
+      "pause.title": "PAUSA",
+      "pause.sub": "La pelea está detenida.",
+      "pause.menu": "MENÚ",
+      "pause.online": "Partida online: la pelea sigue. Si sales, el rival gana por abandono.",
+      "pause.resume": "▶ CONTINUAR",
+      "pause.quit": "✕ SALIR DE LA PARTIDA",
+      "kd.count": "¡NOCAUT! El árbitro está contando hasta 10...",
+      "kd.ko": "¡NOCAUT!",
+      "kd.koText": "Fin de la pelea por nocaut.",
+      "fight.go": "¡PELEA!",
+      "mc.move": "MOVIMIENTO<small>IZQUIERDA / DERECHA</small>",
+      "mc.left": "IR A LA<br>IZQUIERDA",
+      "mc.right": "IR A LA<br>DERECHA",
+      "mc.leftAria": "Ir a la izquierda",
+      "mc.rightAria": "Ir a la derecha",
+      "mc.combat": "ACCIONES DE COMBATE",
+      "mc.guard": "DEFENSA",
+      "mc.guardAria": "Defensa",
+      "mc.punchL": "GOLPE<br>IZQUIERDO",
+      "mc.punchLAria": "Golpe izquierdo",
+      "mc.punchR": "GOLPE<br>DERECHO",
+      "mc.punchRAria": "Golpe derecho",
+      "rotate": "Gira el celular en horizontal para pelear",
+      "post.win": "¡Victoria!",
+      "post.won": "¡{name} ganó!",
+      "post.method": "Método: {method}",
+      "post.draw": "¡Empate!",
+      "post.drawSub": "Ningún peleador ganó — marcador igual.",
+      "post.rematch": "Revancha",
+      "post.change": "Cambiar personaje",
+      "method.Nocaute": "Nocaut",
+      "method.Decisão": "Decisión",
+      "method.Empate": "Empate",
+      "method.Abandono": "Abandono",
+      "help.title": "Controles",
+      "help.desktop": "Computadora",
+      "help.desktopList": "<li>A / D — moverse</li><li>Clic izquierdo — Golpe izquierdo (jab)</li><li>Clic derecho — Golpe derecho (directo)</li><li>Q — Gancho izquierdo</li><li>E — Gancho derecho</li><li>F (mantener) — Defensa</li><li>Espacio — Esquiva</li><li>Shift — Avance rápido</li><li>R — Especial</li><li>T — Provocar</li><li>Esc o P — Pausa</li>",
+      "help.mobile": "Celular",
+      "help.mobileText": "Flechas azules para moverte (mantén presionado), Defensa, Golpe Izquierdo y Golpe Derecho. Los botones también funcionan con el mouse.",
+    },
+  };
+
+  // Nomes e descrições dos especiais por idioma (os nomes dos lutadores não mudam)
+  const SPECIALS = {
+    pt: {
+      "modo-destruicao": ["Modo Destruição", "Potência de soco muito aumentada por tempo limitado."],
+      "ultimo-sobrevivente": ["Último Sobrevivente", "Bônus ofensivo e defensivo quando a vida está baixa."],
+      "caos-total": ["Caos Total", "Mobilidade e troca de direção extremas por tempo limitado."],
+      "leitura-do-adversario": ["Leitura do Adversário", "Recompensa (dano/precisão) quando o oponente repete o mesmo golpe."],
+      "sangue-frio": ["Sangue Frio", "Reduz consumo de fôlego e melhora recuperação defensiva."],
+      "modo-hype": ["Modo Hype", "Acertos consecutivos aumentam velocidade e potência temporariamente."],
+      "cacador": ["Caçador", "Esquiva bem-sucedida abre janela de contra-ataque com bônus."],
+      "combo-perfeito": ["Combo Perfeito", "Combos consecutivos sem levar dano aumentam o multiplicador de dano."],
+      "espirito-de-campea": ["Espírito de Campeã", "Bônus moderado de recuperação de vida/fôlego quando em desvantagem."],
+    },
+    es: {
+      "modo-destruicao": ["Modo Destrucción", "Potencia de golpe muy aumentada por tiempo limitado."],
+      "ultimo-sobrevivente": ["Último Superviviente", "Bonus ofensivo y defensivo cuando la vida está baja."],
+      "caos-total": ["Caos Total", "Movilidad y cambios de dirección extremos por tiempo limitado."],
+      "leitura-do-adversario": ["Lectura del Rival", "Recompensa (daño/precisión) cuando el rival repite el mismo golpe."],
+      "sangue-frio": ["Sangre Fría", "Reduce el gasto de aguante y mejora la recuperación defensiva."],
+      "modo-hype": ["Modo Hype", "Golpes seguidos aumentan velocidad y potencia temporalmente."],
+      "cacador": ["Cazador", "Una esquiva exitosa abre una ventana de contraataque con bonus."],
+      "combo-perfeito": ["Combo Perfecto", "Combos seguidos sin recibir daño aumentan el multiplicador de daño."],
+      "espirito-de-campea": ["Espíritu de Campeona", "Bonus moderado de recuperación de vida/aguante cuando va en desventaja."],
+    },
+  };
+
+  let lang = "pt";
+  try {
+    const saved = localStorage.getItem("lvb-lang");
+    if (saved === "pt" || saved === "es") lang = saved;
+    else if ((navigator.language || "").toLowerCase().startsWith("es")) lang = "es";
+  } catch (_) {}
+
+  const listeners = [];
+
+  function t(key, vars) {
+    let s = (DICT[lang] && DICT[lang][key]) ?? DICT.pt[key] ?? key;
+    if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+    return s;
+  }
+  function special(sp) {
+    const e = sp && SPECIALS[lang][sp.id];
+    return e ? { name: e[0], desc: e[1] } : { name: sp ? sp.name : "", desc: sp ? sp.desc : "" };
+  }
+  function method(m) { return t("method." + m) === "method." + m ? m : t("method." + m); }
+
+  function apply(root) {
+    root = root || document;
+    document.documentElement.lang = lang === "es" ? "es" : "pt-BR";
+    root.querySelectorAll("[data-i18n]").forEach((el) => { el.innerHTML = t(el.dataset.i18n); });
+    root.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+    root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+    root.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+    root.querySelectorAll(".lang-btn").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
+  }
+  function setLang(l) {
+    if (l !== "pt" && l !== "es") return;
+    lang = l;
+    try { localStorage.setItem("lvb-lang", l); } catch (_) {}
+    apply();
+    listeners.forEach((fn) => { try { fn(l); } catch (_) {} });
+  }
+  function onChange(fn) { listeners.push(fn); }
+  function getLang() { return lang; }
+
+  return { t, special, method, apply, setLang, onChange, getLang };
+})();
+
+if (typeof window !== "undefined") window.I18N = I18N;

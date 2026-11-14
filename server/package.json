@@ -1,0 +1,14 @@
+{
+  "name": "la-velada-boxing-server",
+  "version": "1.0.0",
+  "description": "Servidor multiplayer autoritativo (WebSocket) para La Velada Boxing",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node ../tests/engine.test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

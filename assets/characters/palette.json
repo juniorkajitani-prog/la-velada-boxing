@@ -1,0 +1,11 @@
+{
+  "jh-de-la-cruz": { "skin": "#caa07a", "hair": "#171311", "shirt": "#f3a6c0", "pants": "#8a6239", "shoes": "#6b5a4a", "glove": "#d81e1e", "accent": "#ffffff" },
+  "fernanfloo": { "skin": "#e8c39e", "hair": "#171311", "shirt": "#bcd9ec", "pants": "#1c1c1c", "shoes": "#141414", "glove": "#d81e1e", "accent": "#3aa23a" },
+  "ibai": { "skin": "#f0c9a0", "hair": "#6b4226", "shirt": "#e9ddc7", "pants": "#1f2430", "shoes": "#7a2a2a", "glove": "#d81e1e", "accent": "#ffffff" },
+  "juan-guarnizo": { "skin": "#f0c9a0", "hair": "#4a3220", "shirt": "#9aa1ab", "pants": "#20232e", "shoes": "#2e8ad1", "glove": "#d81e1e", "accent": "#e8e8e8" },
+  "auronplay": { "skin": "#d9a876", "hair": "#2e2015", "shirt": "#1c1c1c", "pants": "#23262f", "shoes": "#8a3fae", "glove": "#d81e1e", "accent": "#2e8ad1" },
+  "davo": { "skin": "#e8c39e", "hair": "#6b4a2a", "shirt": "#0b3d91", "pants": "#15306b", "shoes": "#141414", "glove": "#d81e1e", "accent": "#ffd400" },
+  "roro": { "skin": "#f0c9a0", "hair": "#6b4226", "shirt": "#2b2f44", "pants": "#17171c", "shoes": "#8a6fae", "glove": "#d81e1e", "accent": "#c9a0d1" },
+  "rivers": { "skin": "#f0c9a0", "hair": "#d9b45c", "shirt": "#141414", "pants": "#141414", "shoes": "#141414", "glove": "#d81e1e", "accent": "#d4af37" },
+  "la-cobra": { "skin": "#d9a876", "hair": "#2a2a2a", "shirt": "#7c1d3b", "pants": "#141414", "shoes": "#1a2b6b", "glove": "#d81e1e", "accent": "#1a2b6b" }
+}

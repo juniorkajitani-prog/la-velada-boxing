@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>LA VELADA BOXING</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- TELA INICIAL -->
+    <section id="screen-title" class="screen active">
+      <div class="title-wrap">
+        <h1 class="logo">LA VELADA<span>BOXING</span></h1>
+        <div class="menu">
+          <button data-nav="mode-select" class="btn btn-primary" data-i18n="title.play">Jogar</button>
+          <button data-nav="settings" class="btn" data-i18n="title.settings">Configurações</button>
+          <button id="btn-mute-title" class="btn">🔊 Som: ligado</button>
+        </div>
+        <div class="lang-picker">
+          <span class="lang-label" data-i18n="lang.label">Idioma</span>
+          <button class="btn lang-btn" data-lang="pt">🇧🇷 Português</button>
+          <button class="btn lang-btn" data-lang="es">🇪🇸 Español</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SELEÇÃO DE MODO -->
+    <section id="screen-mode-select" class="screen">
+      <h2 data-i18n="mode.choose">Escolha o modo</h2>
+      <div class="mode-grid">
+        <button class="mode-card" data-mode="multiplayer">
+          <strong data-i18n="mode.mp">Multiplayer Online</strong>
+          <span data-i18n="mode.mp.desc"></span>
+        </button>
+        <button class="mode-card" data-mode="training">
+          <strong data-i18n="mode.training">Treinamento</strong>
+          <span data-i18n="mode.training.desc"></span>
+        </button>
+        <button class="mode-card" data-mode="local2p">
+          <strong data-i18n="mode.local">2 Jogadores (local)</strong>
+          <span data-i18n="mode.local.desc"></span>
+        </button>
+        <button class="mode-card" data-mode="tournament">
+          <strong data-i18n="mode.tournament">Torneio</strong>
+          <span data-i18n="mode.tournament.desc"></span>
+        </button>
+      </div>
+      <button class="btn btn-back" data-nav="title" data-i18n="back">Voltar</button>
+    </section>
+
+    <!-- MULTIPLAYER: CRIAR / ENTRAR -->
+    <section id="screen-mp-lobby" class="screen">
+      <h2 data-i18n="mode.mp">Multiplayer Online</h2>
+      <div class="mp-lobby-grid">
+        <div class="mp-box">
+          <h3 data-i18n="mp.create">Criar sala</h3>
+          <p data-i18n="mp.create.desc"></p>
+          <button id="btn-create-room" class="btn btn-primary" data-i18n="mp.create.btn">Criar sala privada</button>
+        </div>
+        <div class="mp-box">
+          <h3 data-i18n="mp.join">Entrar com código</h3>
+          <input id="input-room-code" maxlength="6" placeholder="CÓDIGO" data-i18n-placeholder="mp.code" autocomplete="off" />
+          <button id="btn-join-room" class="btn btn-primary" data-i18n="mp.join.btn">Entrar na sala</button>
+        </div>
+      </div>
+      <p id="mp-status" class="status-line"></p>
+      <button class="btn btn-back" data-nav="mode-select" data-i18n="back">Voltar</button>
+    </section>
+
+    <!-- SALA DE ESPERA / STATUS DE CONEXAO -->
+    <section id="screen-mp-room" class="screen">
+      <h2><span data-i18n="mp.room">Sala</span> <span id="room-code-display"></span></h2>
+      <button id="btn-copy-link" class="btn" data-i18n="mp.copyLink">Copiar link de convite</button>
+      <div class="presence-row">
+        <div class="presence-slot" id="presence-0"><b data-i18n="player1">Jogador 1</b>: <span>—</span></div>
+        <div class="presence-slot" id="presence-1"><b data-i18n="player2">Jogador 2</b>: <span>—</span></div>
+      </div>
+      <p id="room-status" class="status-line"></p>
+      <button class="btn btn-back" data-nav="mode-select" data-i18n="exit">Sair</button>
+    </section>
+
+    <!-- SELEÇÃO DE PERSONAGEM -->
+    <section id="screen-char-select" class="screen">
+      <h2 id="char-select-title">Escolha seu lutador</h2>
+      <div id="char-grid" class="char-grid"></div>
+      <div class="char-select-footer">
+        <div id="char-detail" class="char-detail"></div>
+        <button id="btn-confirm-char" class="btn btn-primary" disabled data-i18n="char.confirm">Confirmar / Pronto</button>
+      </div>
+      <button class="btn btn-back" data-nav="mode-select" data-i18n="back">Voltar</button>
+    </section>
+
+    <!-- PRÉ-LUTA (VS) -->
+    <section id="screen-vs" class="screen">
+      <div class="vs-wrap">
+        <div class="vs-fighter" id="vs-fighter-0"></div>
+        <div class="vs-mid">
+          <div class="vs-label">VS</div>
+          <div id="vs-countdown" class="vs-countdown">3</div>
+        </div>
+        <div class="vs-fighter" id="vs-fighter-1"></div>
+      </div>
+    </section>
+
+    <!-- LUTA -->
+    <section id="screen-fight" class="screen">
+      <canvas id="fight-canvas" width="900" height="500"></canvas>
+      <div id="hit-flash" class="hit-flash"></div>
+      <div class="hud">
+        <div class="hud-side hud-left">
+          <div class="hud-portrait-row">
+            <img id="portrait-0" class="hud-portrait" />
+            <div class="hud-bars">
+              <div class="hud-name" id="hud-name-0"></div>
+              <div class="bar health"><div class="bar-fill" id="health-0"></div></div>
+              <div class="bar stamina"><div class="bar-fill" id="stamina-0"></div></div>
+              <div class="bar special"><div class="bar-fill" id="special-0"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="hud-mid">
+          <div id="round-label">ROUND 1</div>
+          <div id="round-timer">60</div>
+        </div>
+        <div class="hud-side hud-right">
+          <div class="hud-portrait-row">
+            <div class="hud-bars">
+              <div class="hud-name" id="hud-name-1"></div>
+              <div class="bar health"><div class="bar-fill" id="health-1"></div></div>
+              <div class="bar stamina"><div class="bar-fill" id="stamina-1"></div></div>
+              <div class="bar special"><div class="bar-fill" id="special-1"></div></div>
+            </div>
+            <img id="portrait-1" class="hud-portrait" />
+          </div>
+        </div>
+      </div>
+      <button id="btn-mute" class="btn mute-btn" title="Ativar/desativar som" data-i18n-title="sound.toggle">🔊</button>
+      <div class="fight-menu-btns">
+        <button id="btn-pause" class="btn fm-btn" data-i18n-title="fight.pauseTitle" data-i18n="fight.pause">⏸ PAUSAR</button>
+        <button id="btn-quit" class="btn fm-btn fm-quit" data-i18n-title="fight.quitTitle" data-i18n="fight.quit">✕ SAIR</button>
+      </div>
+      <div id="pause-overlay" class="pause-overlay hidden">
+        <div class="pause-box">
+          <div id="pause-title" class="pause-title">PAUSADO</div>
+          <div id="pause-sub" class="pause-sub">A luta está parada.</div>
+          <button id="btn-resume" class="btn pause-action" data-i18n="pause.resume">▶ CONTINUAR</button>
+          <button id="btn-quit-confirm" class="btn pause-action pause-quit" data-i18n="pause.quit">✕ SAIR DA PARTIDA</button>
+        </div>
+      </div>
+      <div id="knockdown-banner" class="knockdown-banner hidden">
+        <div id="knockdown-count" class="knockdown-count">1</div>
+        <div id="knockdown-text" data-i18n="kd.count">O juiz começou a contagem! Toque rapidamente no SOCO para levantar</div>
+      </div>
+      <div id="mobile-controls" class="mobile-controls hidden">
+        <div class="mc-side mc-move-side">
+          <div class="mc-banner" data-i18n="mc.move"></div>
+          <div class="mc-row">
+            <div class="mc-cell"><button class="mc-big mc-blue mc-move" data-move="-1" data-i18n-aria="mc.leftAria"><svg viewBox="0 0 48 48" class="mc-svg"><path d="M30 10 L14 24 L30 38" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mc-tag" data-i18n="mc.left"></span></div>
+            <div class="mc-cell"><button class="mc-big mc-blue mc-move" data-move="1" data-i18n-aria="mc.rightAria"><svg viewBox="0 0 48 48" class="mc-svg"><path d="M18 10 L34 24 L18 38" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="mc-tag" data-i18n="mc.right"></span></div>
+          </div>
+        </div>
+        <div class="mc-side mc-action-side">
+          <div class="mc-banner" data-i18n="mc.combat"></div>
+          <div class="mc-row">
+            <div class="mc-cell"><button class="mc-btn mc-big mc-blue mc-guard" data-action="guard" data-i18n-aria="mc.guardAria"><svg viewBox="0 0 48 48" class="mc-svg"><path d="M24 5 L40 11 V23 C40 33 33 40 24 44 C15 40 8 33 8 23 V11 Z" fill="#dff1ff" stroke="#fff" stroke-width="2"/><path d="M24 5 L24 44 C33 40 40 33 40 23 V11 Z" fill="#9fd0f5"/></svg></button><span class="mc-tag" data-i18n="mc.guard"></span></div>
+            <div class="mc-cell"><button class="mc-btn mc-big mc-red" data-action="jab" data-i18n-aria="mc.punchLAria"><svg viewBox="0 0 48 48" class="mc-svg"><path d="M14 30 C9 28 8 21 11 16 C14 10 22 7 30 8 C38 9 42 15 41 22 C40 28 36 31 31 32 L31 36 L16 36 Z" fill="#fff" stroke="#333" stroke-width="2" stroke-linejoin="round"/><path d="M15 21 C18 18 22 18 24 21" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/><rect x="15" y="35" width="17" height="7" rx="2" fill="#fff" stroke="#333" stroke-width="2"/></svg></button><span class="mc-tag" data-i18n="mc.punchL"></span></div>
+            <div class="mc-cell"><button class="mc-btn mc-big mc-green" data-action="straight" data-i18n-aria="mc.punchRAria"><span class="mc-flip"><svg viewBox="0 0 48 48" class="mc-svg"><path d="M14 30 C9 28 8 21 11 16 C14 10 22 7 30 8 C38 9 42 15 41 22 C40 28 36 31 31 32 L31 36 L16 36 Z" fill="#fff" stroke="#333" stroke-width="2" stroke-linejoin="round"/><path d="M15 21 C18 18 22 18 24 21" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/><rect x="15" y="35" width="17" height="7" rx="2" fill="#fff" stroke="#333" stroke-width="2"/></svg></span></button><span class="mc-tag" data-i18n="mc.punchR"></span></div>
+          </div>
+        </div>
+      </div>
+      <div id="rotate-overlay" class="rotate-overlay">
+        <div class="rotate-icon">📱↻</div>
+        <div data-i18n="rotate"></div>
+      </div>
+    </section>
+
+    <!-- PÓS-LUTA -->
+    <section id="screen-postfight" class="screen">
+      <h2 id="postfight-title">Vitória!</h2>
+      <p id="postfight-sub"></p>
+      <div class="postfight-actions">
+        <button id="btn-rematch" class="btn btn-primary" data-i18n="post.rematch">Revanche</button>
+        <button id="btn-change-char" class="btn" data-i18n="post.change">Trocar personagem</button>
+        <button id="btn-leave-room" class="btn btn-back" data-i18n="exit">Sair</button>
+      </div>
+    </section>
+
+    <!-- CONFIGURAÇÕES / AJUDA -->
+    <section id="screen-settings" class="screen">
+      <h2 data-i18n="help.title">Controles</h2>
+      <div class="controls-help">
+        <div>
+          <h3 data-i18n="help.desktop">Computador</h3>
+          <ul data-i18n="help.desktopList">
+            <li>A / D — mover</li>
+            <li>Clique esquerdo — Jab</li>
+            <li>Clique direito — Direto</li>
+            <li>Q — Gancho esquerdo</li>
+            <li>E — Gancho direito</li>
+            <li>F (segurar) — Defesa</li>
+            <li>Espaço — Esquiva</li>
+            <li>Shift — Avanço rápido</li>
+            <li>R — Especial</li>
+            <li>T — Provocar</li>
+          </ul>
+        </div>
+        <div>
+          <h3 data-i18n="help.mobile">Celular</h3>
+          <p data-i18n="help.mobileText"></p>
+        </div>
+      </div>
+      <div class="lang-picker">
+        <span class="lang-label" data-i18n="lang.label">Idioma</span>
+        <button class="btn lang-btn" data-lang="pt">🇧🇷 Português</button>
+        <button class="btn lang-btn" data-lang="es">🇪🇸 Español</button>
+      </div>
+      <button class="btn btn-back" data-nav="title" data-i18n="back">Voltar</button>
+    </section>
+
+  </div>
+
+  <script src="i18n.js"></script>
+  <script src="../shared/characters.js"></script>
+  <script src="../shared/engine.js"></script>
+  <script src="config.js"></script>
+  <script src="net.js"></script>
+  <script src="ai.js"></script>
+  <script src="audio.js"></script>
+  <script src="render.js"></script>
+  <script src="game.js" defer></script>
+</body>
+</html>

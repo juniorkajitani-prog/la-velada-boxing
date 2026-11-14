@@ -1,0 +1,26 @@
+# Template para publicar o servidor multiplayer no Fly.io.
+# Rodar a partir da RAIZ do repositório: fly launch --config server/fly.toml --dockerfile server/Dockerfile --no-deploy
+# depois: fly deploy --config server/fly.toml --dockerfile server/Dockerfile
+app = "la-velada-boxing-server" # troque por um nome único
+
+[build]
+
+[env]
+  PORT = "8787"
+  ALLOWED_ORIGINS = "*" # troque pelo domínio do cliente publicado
+
+[[services]]
+  internal_port = 8787
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  # WebSocket precisa de conexões persistentes — sem auto-stop para não derrubar partidas em andamento
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
