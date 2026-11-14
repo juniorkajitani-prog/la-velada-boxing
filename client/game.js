@@ -35,10 +35,21 @@
   }
   App.myFighterIndex = myFighterIndex;
 
+  // Sai do modo online (se estava) — usado ao voltar do multiplayer e ao abrir um modo offline
+  function leaveOnline() {
+    if (App.net) { try { Net.leave(); } catch (_) {} }
+    App.net = false;
+    App.mySlot = null;
+    App.roomCode = null;
+    App.presence = [null, null];
+  }
+
   // ---------------- Navegação básica ----------------
   document.querySelectorAll("[data-nav]").forEach((btn) => {
     btn.addEventListener("click", () => {
       stopFightLoop();
+      const inMp = screens["mp-room"].classList.contains("active") || screens["mp-lobby"].classList.contains("active");
+      if (inMp || (App.net && btn.getAttribute("data-nav") === "mode-select")) leaveOnline();
       show(btn.getAttribute("data-nav"));
     });
   });
@@ -46,6 +57,7 @@
   document.querySelectorAll(".mode-card").forEach((card) => {
     card.addEventListener("click", () => {
       App.mode = card.getAttribute("data-mode");
+      if (App.mode !== "multiplayer") leaveOnline(); // treino/2 jogadores: 100% offline
       App.chosen = [null, null];
       App.localStep = 0;
       if (App.mode === "multiplayer") {
@@ -158,7 +170,9 @@
       card.addEventListener("click", () => onCharClick(c, opts));
       grid.appendChild(card);
     });
+    if (openCharSelect._diffDiv) { openCharSelect._diffDiv.remove(); openCharSelect._diffDiv = null; }
     if (opts.showDifficulty) {
+      if (!["easy", "medium", "hard"].includes(App.difficulty)) App.difficulty = "medium";
       const diffDiv = document.createElement("div");
       diffDiv.innerHTML = `<div style="margin-top:8px">${I18N.t("diff.label")}
         <button class="btn diff-btn" data-d="easy">${I18N.t("diff.easy")}</button>
@@ -174,9 +188,8 @@
         })
       );
       openCharSelect._diffDiv = diffDiv;
-    } else if (openCharSelect._diffDiv) {
-      openCharSelect._diffDiv.remove();
-      openCharSelect._diffDiv = null;
+      const cur = diffDiv.querySelector(`.diff-btn[data-d="${App.difficulty}"]`);
+      if (cur) cur.style.outline = "2px solid #ffcc00";
     }
     show("char-select");
     refreshCharGridLocks();
