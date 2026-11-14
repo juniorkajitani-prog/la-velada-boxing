@@ -785,12 +785,6 @@
     else closePauseMenu();
   });
 
-  // Entrar direto numa sala via link ?room=CODIGO
-  const params = new URLSearchParams(location.search);
-  if (params.get("room")) {
-    show("mp-lobby");
-    $("#input-room-code").value = params.get("room");
-  }
 
   window.__APP_DEBUG__ = () => ({
     phase: App.matchState && App.matchState.phase,
@@ -811,5 +805,15 @@
     f.knockdown = { countdownMs: countdownMs ?? 10000, mashProgress: 0 };
   };
 
-  show("title");
+  // Link de convite (?room=CODIGO): vai direto para a sala e já entra sozinho.
+  // (antes o show("title") daqui de baixo sobrescrevia e o convidado caía na tela inicial)
+  const roomParam = (new URLSearchParams(location.search).get("room") || "").trim().toUpperCase();
+  if (roomParam) {
+    App.mode = "multiplayer";
+    show("mp-lobby");
+    $("#input-room-code").value = roomParam;
+    setTimeout(() => $("#btn-join-room").click(), 50);
+  } else {
+    show("title");
+  }
 })();
