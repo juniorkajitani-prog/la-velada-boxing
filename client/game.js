@@ -8,6 +8,8 @@
     Object.values(screens).forEach((el) => el.classList.remove("active"));
     screens[id].classList.add("active");
     if (typeof updateOrientationHint === "function") updateOrientationHint();
+    // trilha toca nos menus e na apresentação (VS); para quando a luta começa e no resultado
+    if (["fight", "postfight"].includes(id)) GameAudio.stopMusic(); else GameAudio.startMusic();
   }
 
   const App = {
@@ -281,8 +283,19 @@
   }
 
   // ---------------- Input: teclado / mouse / touch ----------------
-  window.addEventListener("keydown", (e) => App.keys.add(e.key.toLowerCase()));
-  window.addEventListener("keyup", (e) => App.keys.delete(e.key.toLowerCase()));
+  // A/D (e as outras letras) valem pela tecla física também (e.code), então funcionam com
+  // Caps Lock, Shift ou teclado em outro layout.
+  const codeKey = (e) => (e.code && /^Key[A-Z]$/.test(e.code) ? e.code.slice(3).toLowerCase() : null);
+  window.addEventListener("keydown", (e) => {
+    App.keys.add(e.key.toLowerCase());
+    const c = codeKey(e); if (c) App.keys.add(c);
+  });
+  window.addEventListener("keyup", (e) => {
+    App.keys.delete(e.key.toLowerCase());
+    const c = codeKey(e); if (c) App.keys.delete(c);
+  });
+  // janela perdeu o foco com a tecla apertada: solta tudo (senão o lutador anda sozinho)
+  window.addEventListener("blur", () => { App.keys.clear(); App.mouse.left = App.mouse.right = false; });
   const canvas = $("#fight-canvas");
   const ctx2d = canvas.getContext("2d");
   const render3dReady = true; // mantido como nome pra não mexer em mais lugares; renderer agora é o canvas 2D (render.js)
@@ -972,6 +985,7 @@
     rafId: App.rafId,
     render3dReady,
     health: App.matchState && App.matchState.fighters.map((f) => f.health),
+    x: App.matchState && App.matchState.fighters.map((f) => Math.round(f.x)),
     knockdown: App.matchState && App.matchState.fighters.map((f) => f.knockdown && { ...f.knockdown }),
   });
   window.__TEST_FORCE_ZERO_HEALTH__ = (slot) => { if (App.matchState) App.matchState.fighters[slot].health = 0.01; };
