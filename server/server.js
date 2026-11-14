@@ -147,8 +147,9 @@ function tick(room) {
 }
 
 function handleReadyOrRematch(room, slot) {
-  const preMatch = !room.matchState || room.matchState.phase === "matchEnd";
-  if (!preMatch) return;
+  // "Pronto" só chega de quem está na escolha de personagem. Se ainda existe uma luta
+  // "rolando" no servidor (ex.: alguém recarregou a página no meio da luta), os DOIS
+  // confirmando significa que ninguém está mais nela: começa uma nova em vez de ignorar.
   room.ready[slot] = true;
   broadcastPresence(room);
   if (room.ready[0] && room.ready[1] && room.characterIds[0] && room.characterIds[1]) {

@@ -39,6 +39,8 @@
 
   // Sai do modo online (se estava) — usado ao voltar do multiplayer e ao abrir um modo offline
   function leaveOnline() {
+    App.reconnecting = false;
+    if (typeof showNetNotice === "function") showNetNotice("");
     if (App.net) { try { Net.leave(); } catch (_) {} }
     App.net = false;
     App.mySlot = null;
@@ -103,6 +105,14 @@
     show("mp-room");
   });
   Net.on("roomJoined", (msg) => {
+    if (App.reconnecting && App.roomCode === msg.code) {
+      // voltou pra mesma sala depois de cair: o servidor manda presença/estado e a gente segue de onde estava
+      App.reconnecting = false; reconnectTries = 0;
+      App.mySlot = msg.slot; App.net = true;
+      showNetNotice("");
+      App._shownVs = screens.fight.classList.contains("active") || screens.vs.classList.contains("active");
+      return;
+    }
     App.roomCode = msg.code;
     App.mySlot = msg.slot;
     App.net = true;
@@ -110,6 +120,7 @@
     show("mp-room");
   });
   Net.on("roomError", (msg) => {
+    if (App.reconnecting) { giveUpOnline(I18N.t("mp.lost")); return; } // ex.: servidor reiniciou e a sala sumiu
     $("#mp-status").textContent = ({ "Sala não encontrada.": I18N.t("mp.err.notFound"), "Sala cheia.": I18N.t("mp.err.full") })[msg.message] || msg.message || I18N.t("mp.joinError");
   });
   Net.on("opponentLeft", () => {
@@ -117,11 +128,43 @@
     alert(I18N.t("mp.opponentLeft"));
     show("mode-select");
   });
+  let reconnectTries = 0;
   Net.on("disconnected", () => {
-    if (App.net) {
-      stopFightLoop();
-    }
+    if (!App.net || !App.roomCode) return;
+    if (App.reconnecting) return; // já tem um ciclo de tentativas rodando
+    App.reconnecting = true;
+    showNetNotice(I18N.t("mp.reconnecting"));
+    const attempt = () => {
+      if (!App.reconnecting) return;
+      reconnectTries++;
+      Net.joinRoom(App.roomCode, App.playerName).catch(() => {
+        if (reconnectTries < 8) setTimeout(attempt, 2000);
+        else giveUpOnline(I18N.t("mp.lost"));
+      });
+    };
+    setTimeout(attempt, 1000);
   });
+  function showNetNotice(text) {
+    let el = document.getElementById("net-notice");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "net-notice";
+      el.className = "net-notice";
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.toggle("hidden", !text);
+  }
+  function giveUpOnline(text) {
+    App.reconnecting = false;
+    reconnectTries = 0;
+    showNetNotice("");
+    stopFightLoop();
+    App.mpStopped = true;
+    App.net = false;
+    alert(text);
+    show("mp-lobby");
+  }
 
   $("#btn-copy-link").addEventListener("click", () => {
     const url = `${location.origin}${location.pathname}?room=${App.roomCode}`;
@@ -566,8 +609,16 @@
 
   // ---------------- Multiplayer: envio de input + recepção de estado ----------------
   let lastSend = 0;
+  function startMpLoops() {
+    if (App.mpLoopsRunning) return;
+    App.mpLoopsRunning = true;
+    App.mpStopped = false;
+    lastTs = performance.now();
+    requestAnimationFrame(mpRenderTick);
+    requestAnimationFrame(sendMpInputLoop);
+  }
   function sendMpInputLoop(ts) {
-    if (App.mpStopped) return;
+    if (App.mpStopped || !App.mpLoopsRunning) return;
     if (!App.net || !screens.fight.classList.contains("active")) {
       App.rafId = requestAnimationFrame(sendMpInputLoop);
       return;
@@ -591,12 +642,17 @@
       $("#hud-name-0").textContent = f0.playerLabel + " — " + f0.name;
       $("#hud-name-1").textContent = f1.playerLabel + " — " + f1.name;
       showVsScreen(f0.playerLabel, f0.characterId, f1.playerLabel, f1.characterId);
-      if (!App.rafId) {
-        App.mpStopped = false;
-        lastTs = performance.now();
-        App.rafId = requestAnimationFrame(mpRenderTick);
-        requestAnimationFrame(sendMpInputLoop);
-      }
+      startMpLoops();
+    } else if ((msg.state.phase === "fighting" || msg.state.phase === "countdown") && !App._shownVs) {
+      // Reconexão no meio de uma luta (recarregou a página / a internet piscou): volta direto pra luta
+      App._shownVs = true;
+      audioPrevSnap = null;
+      resetRecoverUI();
+      const f0 = msg.state.fighters[0], f1 = msg.state.fighters[1];
+      $("#hud-name-0").textContent = f0.playerLabel + " — " + f0.name;
+      $("#hud-name-1").textContent = f1.playerLabel + " — " + f1.name;
+      show("fight");
+      startMpLoops();
     }
     if (msg.state.phase === "matchEnd" && !App._endShown) {
       App._endShown = true;
@@ -607,13 +663,13 @@
   });
 
   function mpRenderTick(ts) {
-    if (App.mpStopped) return;
+    if (App.mpStopped) { App.mpLoopsRunning = false; return; }
     if (App.matchState) {
       processAudioEvents(App.matchState);
       if (render3dReady) draw2d(App.matchState, ts);
       updateHud(App.matchState);
     }
-    if (App.matchState && App.matchState.phase === "matchEnd") return;
+    if (App.matchState && App.matchState.phase === "matchEnd") { App.mpLoopsRunning = false; return; }
     requestAnimationFrame(mpRenderTick);
   }
 
@@ -902,7 +958,7 @@
   });
   $("#btn-change-char").addEventListener("click", () => {
     if (App.net) {
-      show("mp-room");
+      openCharSelect(I18N.t("char.choose"), { multiplayer: true });
     } else if (App.mode === "training") {
       openCharSelect(I18N.t("char.chooseTraining"), { showDifficulty: true });
     } else {
@@ -954,6 +1010,7 @@
     resetRecoverUI();
     stopFightLoop();
     App.mpStopped = true;
+    App.reconnecting = false; showNetNotice("");
     if (App.net) { try { Net.leave(); } catch (_) {} App.net = false; }
     App.matchState = null;
     App._shownVs = false;

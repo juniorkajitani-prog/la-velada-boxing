@@ -318,3 +318,6 @@ body.rec-active #mobile-controls { visibility: hidden; }
   .rec-hint { display: none; }
 }
 .recover-overlay.watching .rec-title { font-size: 22px; line-height: 1.1; animation: none; }
+
+.net-notice { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 60; background: #b3001b; color: #fff;
+  padding: 8px 14px; border-radius: 10px; border: 2px solid #fff; font-family: Arial, sans-serif; font-weight: bold; font-size: 14px; }
