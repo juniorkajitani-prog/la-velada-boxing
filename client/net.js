@@ -3,6 +3,7 @@ const Net = (() => {
   let ws = null;
   let handlers = {};
   let myName = "Jogador";
+  let recoverSeq = 0;
 
   function serverUrl() {
     if (window.MP_SERVER_URL) return window.MP_SERVER_URL;
@@ -21,6 +22,7 @@ const Net = (() => {
   function connect() {
     return new Promise((resolve, reject) => {
       ws = new WebSocket(serverUrl());
+      recoverSeq = 0; // cada conexão nova começa a sequência do zero (o servidor faz o mesmo)
       ws.onopen = () => resolve();
       ws.onerror = (e) => reject(e);
       ws.onclose = () => emit("disconnected", {});
@@ -63,8 +65,9 @@ const Net = (() => {
   function input(payload) { send({ type: "input", input: payload }); }
   function rematch() { send({ type: "rematch" }); }
   function leave() { send({ type: "leave" }); }
+  function recoverClick() { recoverSeq += 1; send({ type: "recover", seq: recoverSeq }); }
 
-  return { on, createRoom, joinRoom, selectCharacter, ready, input, rematch, leave, serverUrl };
+  return { on, createRoom, joinRoom, selectCharacter, ready, input, rematch, leave, recoverClick, serverUrl };
 })();
 
 if (typeof window !== "undefined") window.Net = Net;

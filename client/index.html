@@ -153,6 +153,25 @@
         <div id="knockdown-count" class="knockdown-count">1</div>
         <div id="knockdown-text" data-i18n="kd.count">O juiz começou a contagem! Toque rapidamente no SOCO para levantar</div>
       </div>
+      <!-- Recuperação por cliques: aparece quando um lutador cai -->
+      <div id="recover-overlay" class="recover-overlay hidden">
+        <div class="rec-box">
+          <div class="rec-count-badge"><small data-i18n="rec.count">CONTAGEM</small><b id="rec-count">1</b></div>
+          <div id="rec-title" class="rec-title" data-i18n="rec.title">LEVANTE-SE!</div>
+          <div id="rec-msg" class="rec-msg" data-i18n="rec.msg">CLIQUE RAPIDAMENTE PARA RECUPERAR SUAS FORÇAS!</div>
+          <div class="rec-thermo-row">
+            <div class="rec-thermo">
+              <div class="rec-bulb"></div>
+              <div class="rec-tube"><div id="rec-fill" class="rec-fill"></div><div class="rec-ticks"></div></div>
+            </div>
+            <div id="rec-pct" class="rec-pct">0%</div>
+          </div>
+          <div id="rec-clicks" class="rec-clicks">0 / 12</div>
+          <button id="rec-btn" class="rec-btn" type="button"><span data-i18n="rec.btn">👊 TOQUE!</span></button>
+          <div id="rec-hint" class="rec-hint" data-i18n="rec.hint">Clique, toque ou aperte ESPAÇO</div>
+        </div>
+      </div>
+      <div id="recover-toast" class="recover-toast hidden"></div>
       <div id="mobile-controls" class="mobile-controls hidden">
         <div class="mc-side mc-move-side">
           <div class="mc-banner" data-i18n="mc.move"></div>

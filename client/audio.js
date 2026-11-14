@@ -13,6 +13,8 @@ const GameAudio = (() => {
     victory: "victory.wav",
     special: "special.wav",
     crowd: "crowd_ambience.wav",
+    recoverTap: "recover_tap.wav",
+    getUp: "get_up.wav",
   };
   const cache = {};
   let muted = false;

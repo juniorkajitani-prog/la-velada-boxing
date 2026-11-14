@@ -268,6 +268,13 @@ const Render = (() => {
       case "fallen":
         rot = 1.45 * fighter.facing * -1; ty = 70; alpha = 0.95;
         break;
+      case "recovering": {
+        // levantando: sobe do chão e "estica" até ficar de pé
+        const p = 1 - Math.max(0, fighter.actionTimer || 0) / 900;
+        ty = (1 - p) * 46; scaleY = 0.72 + 0.28 * p; scaleX = 1.08 - 0.08 * p;
+        rot = (1 - p) * 0.35 * -fighter.facing + Math.sin(t * 30) * 0.02 * (1 - p);
+        break;
+      }
       default:
         break;
     }
@@ -305,6 +312,14 @@ const Render = (() => {
         // pra deitar o sprite neutro no chão.
         tx = 0;
         ty = 6;
+        // tentando levantar: quanto mais a barra enche, mais ele se ergue e treme de esforço
+        const kd = fighter.knockdown;
+        if (kd && kd.required) {
+          const prog = Math.min(1, kd.clicks / kd.required);
+          ty -= prog * 16;
+          rot = Math.sin(timeMs / 1000 * 26) * 0.035 * prog;
+          tx = Math.sin(timeMs / 1000 * 41) * 2.5 * prog;
+        }
       } else if (fighter.state === "move") {
         tx = 0; // posição já vem de baseX; só mantemos o leve bob vertical do stateTransform
       }
@@ -478,6 +493,29 @@ const Render = (() => {
     ctx.restore();
   }
 
+  function drawRecoveryBar(ctx, matchState, w, h, floorY, timeMs) {
+    matchState.fighters.forEach((f) => {
+      const kd = f.knockdown;
+      if (!kd || !kd.required) return;
+      const x = f.x * (w / 900);
+      const bw = Math.max(90, w * 0.13), bh = Math.max(9, h * 0.022);
+      const y = floorY - h * 0.27;
+      const prog = Math.min(1, kd.clicks / kd.required);
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,.65)";
+      ctx.fillRect(x - bw / 2 - 3, y - 3, bw + 6, bh + 6);
+      const g = ctx.createLinearGradient(x - bw / 2, 0, x + bw / 2, 0);
+      g.addColorStop(0, "#e2231a"); g.addColorStop(0.5, "#ff8a00"); g.addColorStop(0.8, "#ffd400"); g.addColorStop(1, "#6cff5a");
+      ctx.fillStyle = "#2a2638"; ctx.fillRect(x - bw / 2, y, bw, bh);
+      ctx.fillStyle = g; ctx.fillRect(x - bw / 2, y, bw * prog, bh);
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(x - bw / 2, y, bw, bh);
+      ctx.font = `bold ${Math.round(Math.max(10, h * 0.024))}px "Arial Black", Arial`;
+      ctx.textAlign = "center"; ctx.fillStyle = "#ffd400";
+      ctx.fillText(Math.round(prog * 100) + "%", x, y - 5);
+      ctx.restore();
+    });
+  }
+
   function drawMatch(ctx, matchState, w, h, timeMs) {
     ctx.save();
     const shaking = timeMs < fx.shakeUntil;
@@ -491,6 +529,7 @@ const Render = (() => {
     const order = fA.x < fB.x ? [fA, fB] : [fB, fA];
     order.forEach((f) => drawFighter(ctx, f, w, h, floorY, timeMs));
     drawReferee(ctx, matchState, w, h, floorY, timeMs);
+    drawRecoveryBar(ctx, matchState, w, h, floorY, timeMs);
     updateAndDrawSparks(ctx, w, h, floorY, timeMs);
 
     if (matchState.phase === "countdown") {

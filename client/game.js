@@ -256,6 +256,7 @@
   let localMode = null; // "training" | "local2p"
 
   function startLocalMatch(charA, charB, labelA, labelB, { aiSlot } = {}) {
+    resetRecoverUI();
     App.matchState = Engine.createMatchState(charA, charB, labelA, labelB);
     audioPrevSnap = null;
     localMode = App.mode;
@@ -468,6 +469,7 @@
     simAccumulator += frameDt;
 
     if (App.paused) simAccumulator = 0; // pausado: o tempo não anda
+    if (!App.net && App.matchState && !App.paused && localMode === "training") aiRecoverTick(ts);
     if (!App.net && App.matchState && !App.paused) {
       let steps = 0;
       while (simAccumulator >= SIM_STEP_MS && steps < MAX_STEPS_PER_FRAME) {
@@ -495,12 +497,26 @@
       if (render3dReady) draw2d(App.matchState, ts);
       updateHud(App.matchState);
       if (App.matchState.phase === "matchEnd") {
-        showPostfight(App.matchState);
         stopFightLoop();
+        showPostfightAfterKo(App.matchState);
         return;
       }
     }
     App.rafId = requestAnimationFrame(fightTick);
+  }
+
+  // IA caída "clica" para levantar: fácil ~2,2/s, médio ~3,2/s, difícil ~4,2/s.
+  // Assim a IA costuma levantar das primeiras quedas e vai ficando no chão nas seguintes.
+  let aiNextClickAt = 0, aiWasDown = false;
+  function aiRecoverTick(ts) {
+    const f = App.matchState.fighters[1];
+    if (!f.knockdown || f.knockdown.ko) { aiWasDown = false; return; }
+    const rate = { easy: 2.2, medium: 3.2, hard: 4.2 }[App.difficulty] || 3;
+    if (!aiWasDown) { aiWasDown = true; aiNextClickAt = ts + 700; } // tempo de reação
+    if (ts >= aiNextClickAt) {
+      Engine.registerRecoveryClick(f, ts);
+      aiNextClickAt = ts + (1000 / rate) * (0.75 + Math.random() * 0.5);
+    }
   }
 
   // Para local2p, P1 usa um esquema só de teclado (sem mouse) para não conflitar com P2 no mesmo dispositivo.
@@ -544,6 +560,7 @@
     if (msg.state.phase === "countdown" && msg.state.round === 1 && !App._shownVs) {
       App._shownVs = true;
       audioPrevSnap = null;
+      resetRecoverUI();
       const f0 = msg.state.fighters[0], f1 = msg.state.fighters[1];
       $("#hud-name-0").textContent = f0.playerLabel + " — " + f0.name;
       $("#hud-name-1").textContent = f1.playerLabel + " — " + f1.name;
@@ -555,9 +572,12 @@
         requestAnimationFrame(sendMpInputLoop);
       }
     }
-    if (msg.state.phase === "matchEnd") {
-      showPostfight(msg.state);
+    if (msg.state.phase === "matchEnd" && !App._endShown) {
+      App._endShown = true;
+      updateHud(msg.state);
+      showPostfightAfterKo(msg.state);
     }
+    if (msg.state.phase !== "matchEnd") App._endShown = false;
   });
 
   function mpRenderTick(ts) {
@@ -583,8 +603,9 @@
     $("#round-label").textContent = "ROUND " + ms.round;
     $("#round-timer").textContent = Math.max(0, Math.ceil(ms.roundTimeMs / 1000));
     const kd = fA.knockdown || fB.knockdown;
-    $("#knockdown-banner").classList.toggle("hidden", !kd);
+    $("#knockdown-banner").classList.add("hidden");
     updateKnockdownCount(kd);
+    updateRecoverUI(ms);
     updateMobileButtonStates();
     const p0 = $("#portrait-0"), p1 = $("#portrait-1");
     const want0 = `../assets/characters/${fA.characterId}/thumb.png`;
@@ -621,6 +642,149 @@
       countEl.classList.add("pulse");
       GameAudio.play("countdownBeep", 0.8);
       lastKdCount = count;
+    }
+  }
+
+  // ---------------- Recuperação por cliques: "LEVANTE-SE!" ----------------
+  // Quem decide se levantou é o motor (local) ou o servidor (online). Aqui só mostramos o
+  // estado oficial (knockdown.clicks / required / countdownMs) e enviamos os cliques.
+  function humanSlots() {
+    if (App.net) return [App.myFighterIndex()];
+    if (localMode === "training") return [0];
+    return [0, 1]; // 2 jogadores no mesmo aparelho
+  }
+  function downSlot(ms) {
+    if (!ms) return -1;
+    return ms.fighters[0].knockdown ? 0 : ms.fighters[1].knockdown ? 1 : -1;
+  }
+  let recPrevDown = -1, recLastCount = 0, recLastLocalTap = 0, recToastUntil = 0, recKoShown = false;
+  function showRecoverToast(text, ko) {
+    const t = $("#recover-toast");
+    const wasHidden = t.classList.contains("hidden");
+    if (!wasHidden && t.textContent === text) return; // já está na tela: não reinicia a animação
+    t.textContent = text;
+    t.classList.toggle("ko", !!ko);
+    t.classList.remove("hidden");
+    t.style.animation = "none"; void t.offsetWidth; t.style.animation = "";
+  }
+  function updateRecoverUI(ms) {
+    const ov = $("#recover-overlay");
+    const slot = downSlot(ms);
+    // levantou agora há pouco → "VOCÊ CONSEGUIU LEVANTAR!"
+    const upSlot = ms.fighters.findIndex((f) => f.justRecoveredMs > 0);
+    if (upSlot >= 0) {
+      if (recPrevDown === upSlot) GameAudio.play("getUp", 0.9);
+      const mine = humanSlots().includes(upSlot) && (App.net || localMode === "training");
+      showRecoverToast(mine ? I18N.t("rec.youUp") : I18N.t("rec.otherUp", { name: ms.fighters[upSlot].name }));
+      recToastUntil = performance.now() + 200;
+    } else if (!recKoShown && performance.now() > recToastUntil) {
+      $("#recover-toast").classList.add("hidden");
+    }
+    recPrevDown = slot;
+    if (slot < 0) { ov.classList.add("hidden"); document.body.classList.remove("rec-active"); recLastCount = 0; return; }
+
+    const f = ms.fighters[slot];
+    const kd = f.knockdown;
+    const watching = !humanSlots().includes(slot);
+    ov.classList.remove("hidden");
+    ov.classList.toggle("watching", watching);
+    document.body.classList.toggle("rec-active", !watching); // esconde os botões de luta enquanto tenta levantar
+    const pct = Math.max(0, Math.min(100, Math.round((kd.clicks / kd.required) * 100)));
+    $("#rec-fill").style.width = pct + "%";
+    $("#rec-pct").textContent = pct + "%";
+    $("#rec-clicks").textContent = I18N.t("rec.clicks", { n: kd.clicks, total: kd.required, fall: kd.fall || 1 });
+    if (watching) {
+      $("#rec-title").textContent = I18N.t("rec.watchTitle", { name: f.name.toUpperCase() });
+      $("#rec-msg").textContent = I18N.t("rec.watchMsg");
+    } else {
+      $("#rec-title").textContent = I18N.t("rec.title");
+      $("#rec-msg").textContent = I18N.t("rec.msg");
+    }
+    const elapsed = Engine.KNOCKDOWN_COUNT_MS - kd.countdownMs;
+    const count = Math.min(10, Math.max(1, Math.floor(elapsed / (Engine.KNOCKDOWN_COUNT_MS / 10)) + 1));
+    if (count !== recLastCount) {
+      $("#rec-count").textContent = count;
+      const badge = document.querySelector(".rec-count-badge");
+      badge.classList.remove("tick"); void badge.offsetWidth; badge.classList.add("tick");
+      recLastCount = count;
+    }
+    if (kd.ko) {
+      $("#rec-title").textContent = I18N.t("rec.ko");
+      $("#rec-btn").style.visibility = "hidden";
+    } else {
+      $("#rec-btn").style.visibility = "";
+    }
+  }
+  function recoverPop(x, y, text) {
+    const host = screens.fight;
+    const r = host.getBoundingClientRect();
+    const el = document.createElement("div");
+    el.className = "rec-pop";
+    el.textContent = text;
+    el.style.left = (x - r.left) + "px";
+    el.style.top = (y - r.top - 20) + "px";
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 650);
+  }
+  function onRecoverTap(x, y) {
+    const ms = App.matchState;
+    if (!ms || App.paused || ms.phase !== "fighting") return;
+    const slot = downSlot(ms);
+    if (slot < 0 || !humanSlots().includes(slot)) return;
+    const f = ms.fighters[slot];
+    if (!f.knockdown || f.knockdown.ko) return;
+    const now = performance.now();
+    let counted;
+    if (App.net) {
+      // online: só avisa o servidor; ele valida e devolve o progresso oficial no próximo estado
+      if (now - recLastLocalTap < Engine.RECOVERY_MIN_CLICK_INTERVAL_MS) return;
+      Net.recoverClick();
+      counted = true;
+    } else {
+      counted = Engine.registerRecoveryClick(f, now);
+    }
+    if (!counted) return;
+    recLastLocalTap = now;
+    GameAudio.play("recoverTap", 0.5);
+    const fill = $("#rec-fill");
+    fill.classList.add("bump"); setTimeout(() => fill.classList.remove("bump"), 90);
+    const ov = $("#recover-overlay");
+    ov.classList.remove("shake"); void ov.offsetWidth; ov.classList.add("shake");
+    const btn = $("#rec-btn");
+    btn.classList.add("pressed"); setTimeout(() => btn.classList.remove("pressed"), 80);
+    if (x != null) recoverPop(x, y, Math.random() < 0.25 ? "💪" : "+1");
+  }
+  // Cada dedo/clique é UM pointerdown (pointer events não duplicam toque + mouse emulado)
+  $("#recover-overlay").addEventListener("pointerdown", (e) => {
+    if ($("#recover-overlay").classList.contains("watching")) return;
+    e.preventDefault();
+    onRecoverTap(e.clientX, e.clientY);
+  });
+  $("#recover-overlay").addEventListener("contextmenu", (e) => e.preventDefault());
+  window.addEventListener("keydown", (e) => {
+    if (e.repeat) return; // segurar a tecla não conta
+    if (e.code !== "Space" && e.key !== "Enter") return;
+    if ($("#recover-overlay").classList.contains("hidden") || $("#recover-overlay").classList.contains("watching")) return;
+    e.preventDefault();
+    const b = $("#rec-btn").getBoundingClientRect();
+    onRecoverTap(b.left + b.width / 2, b.top);
+  });
+  function resetRecoverUI() {
+    $("#recover-overlay").classList.add("hidden");
+    $("#recover-toast").classList.add("hidden");
+    document.body.classList.remove("rec-active");
+    recPrevDown = -1; recLastCount = 0; recKoShown = false;
+  }
+  // Nocaute definitivo: segura a tela ~1,8s com "NOCAUTE!" antes do resultado
+  function showPostfightAfterKo(ms) {
+    if (ms.result && ms.result.method === "Nocaute") {
+      recKoShown = true;
+      showRecoverToast(I18N.t("rec.ko"), true);
+      GameAudio.play("knockdown", 1);
+      setTimeout(() => { resetRecoverUI(); showPostfight(ms); }, 1800);
+    } else {
+      resetRecoverUI();
+      showPostfight(ms);
     }
   }
 
@@ -761,6 +925,7 @@
   }
   function quitMatch() {
     closePauseMenu();
+    resetRecoverUI();
     stopFightLoop();
     App.mpStopped = true;
     if (App.net) { try { Net.leave(); } catch (_) {} App.net = false; }
@@ -802,7 +967,9 @@
     const f = App.matchState.fighters[slot];
     f.health = 0;
     f.state = "fallen";
-    f.knockdown = { countdownMs: countdownMs ?? 10000, mashProgress: 0 };
+    f.knockdowns = (f.knockdowns || 0) + 1;
+    f.knockdown = { countdownMs: countdownMs ?? Engine.KNOCKDOWN_COUNT_MS, downMs: 0, fall: f.knockdowns,
+      required: Engine.recoveryClicksRequired(f, f.knockdowns), clicks: 0, lastClickAt: null, recovered: false };
   };
 
   // Link de convite (?room=CODIGO): vai direto para a sala e já entra sozinho.

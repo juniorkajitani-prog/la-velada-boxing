@@ -8,9 +8,48 @@ const FIGHTER_HALF_WIDTH = 34;
 const MOVE_SPEED_BASE = 180; // px/s a velocidade 100 (antes 90: andar até o rival levava 5-13s)
 const ROUND_MS = 60 * 1000;
 const ROUNDS_TOTAL = 3;
-// Vida zerada = NOCAUTE: o lutador cai e NÃO levanta. O juiz faz a contagem até 10
-// (rápida, só para a cena) e a luta acaba ali — não existe próximo round.
-const KNOCKDOWN_COUNT_MS = 4000;
+// ---------------- Nocaute + recuperação por cliques ("LEVANTE-SE!") ----------------
+// Vida zerada: o lutador cai e o juiz conta de 1 a 10 (1 número por segundo). Enquanto
+// isso, o jogador caído precisa encher a barra clicando/tocando rápido. Encheu antes do
+// 10 → levanta e a luta segue. Chegou no 10 → derrota por KO, fim de luta.
+// A contagem NUNCA pausa por causa dos cliques.
+const KNOCKDOWN_COUNT_MS = 10000;
+// Cliques necessários por queda (1ª, 2ª, 3ª...). Ajustável. Depois da 5ª: +10 por queda.
+const RECOVERY_CLICKS_BY_FALL = [12, 18, 25, 33, 42];
+const RECOVERY_EXTRA_PER_FALL = 10;
+const RECOVERY_MIN_CLICK_INTERVAL_MS = 60; // ~16 cliques/s no máximo: corta auto-clicker e cliques duplicados
+const RECOVERY_HEALTH_PCT = 0.3;          // vida com que o lutador volta
+const RECOVERY_ANIM_MS = 900;             // animação de levantar (invulnerável)
+
+// Quantos cliques esta queda vai exigir, considerando os atributos (servidor decide isso).
+function recoveryClicksRequired(fighter, fallNumber) {
+  const idx = fallNumber - 1;
+  const base = idx < RECOVERY_CLICKS_BY_FALL.length
+    ? RECOVERY_CLICKS_BY_FALL[idx]
+    : RECOVERY_CLICKS_BY_FALL[RECOVERY_CLICKS_BY_FALL.length - 1] + RECOVERY_EXTRA_PER_FALL * (idx - RECOVERY_CLICKS_BY_FALL.length + 1);
+  // Resistência alta ajuda um pouco (até -12%); resistência baixa atrapalha um pouco (até +6%)
+  const enduranceF = 1.06 - (fighter.stats.endurance / 100) * 0.18;
+  // Cansado (pouco fôlego) precisa de mais esforço (até +20%)
+  const staminaF = 1 + 0.2 * (1 - fighter.stamina / fighter.maxStamina);
+  // Dano acumulado na luta (até +15%)
+  const damageF = 1 + Math.min(0.15, (fighter.damageTaken || 0) / (fighter.maxHealth * 4));
+  // Nunca deixa os atributos tornarem automático nem impossível
+  const factor = clamp(enduranceF * staminaF * damageF, 0.85, 1.4);
+  return Math.max(8, Math.round(base * factor));
+}
+
+// Registra UM clique de recuperação. Retorna true se contou. nowMs = relógio real de quem
+// valida (servidor: Date.now(); jogo local: performance.now()).
+function registerRecoveryClick(fighter, nowMs) {
+  const kd = fighter.knockdown;
+  if (!kd || kd.ko || kd.recovered) return false;
+  if (typeof nowMs !== "number" || !isFinite(nowMs)) return false;
+  if (kd.lastClickAt != null && nowMs - kd.lastClickAt < RECOVERY_MIN_CLICK_INTERVAL_MS) return false;
+  kd.lastClickAt = nowMs;
+  kd.clicks = Math.min(kd.required, kd.clicks + 1);
+  if (kd.clicks >= kd.required) kd.recovered = true; // levanta no próximo passo da simulação
+  return true;
+}
 
 const MOVES = {
   jab: { region: "head", dmg: 6, staminaCost: 6, startup: 90, active: 70, recover: 140, range: 80 },
@@ -191,6 +230,7 @@ function applyDamage(attacker, defender, move, matchState) {
   if (defender.special?.id === "sangue-frio" && defender.specialActive > 0) dmg *= 0.8;
 
   dmg = Math.max(0.5, dmg);
+  defender.damageTaken = (defender.damageTaken || 0) + dmg * HEALTH_DAMAGE_SCALE;
 
   // Calibragem: só a perda de VIDA é escalonada, para a luta exigir bem mais socos até o nocaute.
   // Fôlego, medidor de especial e pontuação continuam usando o dano "cheio".
@@ -221,7 +261,16 @@ function applyDamage(attacker, defender, move, matchState) {
   if (defender.health <= 0 && !defender.knockdown) {
     defender.state = "fallen";
     defender.knockdowns = (defender.knockdowns || 0) + 1;
-    defender.knockdown = { countdownMs: KNOCKDOWN_COUNT_MS, mashProgress: 0, downMs: 0, lastMash: false };
+    defender.guard = false;
+    defender.knockdown = {
+      countdownMs: KNOCKDOWN_COUNT_MS,
+      downMs: 0,
+      fall: defender.knockdowns,
+      required: recoveryClicksRequired(defender, defender.knockdowns),
+      clicks: 0,
+      lastClickAt: null,
+      recovered: false,
+    };
     matchState.log.push(`${defender.name} caiu!`);
   }
 
@@ -233,6 +282,8 @@ function resolveActiveHit(attacker, defender, matchState) {
   const move = MOVES[attacker.currentMove];
   if (!move) return;
   attacker.hasHitThisMove = true;
+  // ninguém bate em quem está no chão ou levantando
+  if (defender.knockdown || defender.state === "recovering") return;
   const dist = distanceBetween(attacker, defender);
   if (dist > move.range) return; // fora de alcance, erra
   if (defender.dodgeIFrames > 0) {
@@ -246,13 +297,24 @@ function resolveActiveHit(attacker, defender, matchState) {
   applyDamage(attacker, defender, move, matchState);
 }
 
-function updateKnockdown(fighter, dtMs) {
+function updateKnockdown(fighter, dtMs, matchState) {
   const kd = fighter.knockdown;
   if (!kd) return;
+  if (kd.recovered) {
+    // barra cheia antes do 10: levanta (animação de recuperação) e a luta continua
+    fighter.knockdown = null;
+    fighter.health = clamp(fighter.maxHealth * RECOVERY_HEALTH_PCT, 1, fighter.maxHealth);
+    fighter.stamina = clamp(Math.max(fighter.stamina, 35), 0, fighter.maxStamina);
+    fighter.state = "recovering";
+    fighter.actionTimer = RECOVERY_ANIM_MS;
+    fighter.justRecoveredMs = 1800; // mostra "VOCÊ CONSEGUIU LEVANTAR!"
+    if (matchState) matchState.log.push(`${fighter.name} levantou!`);
+    return;
+  }
   kd.countdownMs -= dtMs;
   kd.downMs = (kd.downMs || 0) + dtMs;
   fighter.state = "fallen";
-  if (kd.countdownMs <= 0) kd.ko = true; // fim da contagem: nocaute, fim de luta
+  if (kd.countdownMs <= 0) { kd.countdownMs = 0; kd.ko = true; } // chegou no 10: KO, fim de luta
 }
 
 function regenStamina(fighter, dtMs) {
@@ -265,6 +327,7 @@ function regenStamina(fighter, dtMs) {
 }
 
 function regenSpecialPassives(fighter, dtMs, oppHealthPct) {
+  if (fighter.knockdown) return; // no chão não regenera (a vida volta só se levantar)
   // Ibai: Último Sobrevivente — bônus quando vida baixa (passivo, não precisa do medidor)
   if (fighter.special?.id === "ultimo-sobrevivente" && fighter.health / fighter.maxHealth < 0.3) {
     fighter.specialActive = Math.max(fighter.specialActive, 1);
@@ -299,12 +362,13 @@ function tickFighterTimers(fighter, dtMs) {
     fighter.actionTimer -= dtMs;
     if (fighter.actionTimer <= 0) {
       fighter.actionTimer = 0;
-      if (fighter.state === "dodge" || fighter.state === "taunt" || fighter.state === "stun") {
+      if (fighter.state === "dodge" || fighter.state === "taunt" || fighter.state === "stun" || fighter.state === "recovering") {
         fighter.state = "idle";
       }
     }
   }
   if (fighter.dodgeIFrames > 0) fighter.dodgeIFrames = Math.max(0, fighter.dodgeIFrames - dtMs);
+  if (fighter.justRecoveredMs > 0) fighter.justRecoveredMs = Math.max(0, fighter.justRecoveredMs - dtMs);
   if (fighter.specialActive > 0) fighter.specialActive = Math.max(0, fighter.specialActive - dtMs);
   if (fighter.comboCount > 0) {
     fighter.noDamageStreak += dtMs;
@@ -315,7 +379,7 @@ function tickFighterTimers(fighter, dtMs) {
 
 // input = { move: "left"|"right"|null, action: "jab"|"straight"|"hookLeft"|"hookRight"|"guard"|"guardOff"|"dodge"|"special"|"taunt"|"advance"|null, mash: bool }
 function applyInput(fighter, opponent, input, dtMs) {
-  if (fighter.state === "fallen" || fighter.state === "stun") return;
+  if (fighter.state === "fallen" || fighter.state === "stun" || fighter.state === "recovering") return;
 
   if (input.action === "guard") startGuard(fighter, true);
   else if (input.action === "guardOff") startGuard(fighter, false);
@@ -369,8 +433,8 @@ function stepMatch(matchState, inputA, inputB, dtMs) {
   }
   if (matchState.phase !== "fighting") return matchState;
 
-  if (fA.knockdown) updateKnockdown(fA, dtMs);
-  if (fB.knockdown) updateKnockdown(fB, dtMs);
+  if (fA.knockdown) updateKnockdown(fA, dtMs, matchState);
+  if (fB.knockdown) updateKnockdown(fB, dtMs, matchState);
 
   if (!fA.knockdown) applyInput(fA, fB, inputA || {}, dtMs);
   if (!fB.knockdown) applyInput(fB, fA, inputB || {}, dtMs);
@@ -427,6 +491,7 @@ function stepMatch(matchState, inputA, inputB, dtMs) {
 
 const api = {
   ARENA_WIDTH, FLOOR_Y, ROUND_MS, ROUNDS_TOTAL, MOVES, KNOCKDOWN_COUNT_MS,
+  RECOVERY_CLICKS_BY_FALL, RECOVERY_MIN_CLICK_INTERVAL_MS, recoveryClicksRequired, registerRecoveryClick,
   createMatchState, createFighter, stepMatch, applyInput,
   HEALTH_DAMAGE_SCALE, _applyDamage: applyDamage,
 };

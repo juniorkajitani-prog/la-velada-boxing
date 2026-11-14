@@ -103,7 +103,44 @@ async function main() {
   assert(lastState.state.fighters[1].health < healthBefore, "socos de A tiraram vida de B pelo servidor autoritativo");
   console.log(`    (vida de B: antes=${healthBefore.toFixed(1)}, depois=${lastState.state.fighters[1].health.toFixed(1)}, fase atual=${lastState.state.phase})`);
 
-  // 6) Jogador B sai da sala -> A deve ser avisado
+  // 6) Nocaute + recuperação por cliques, com o SERVIDOR contando
+  const lastOf = (arr) => arr.filter((m) => m.type === "state").pop();
+  // A continua socando até B cair (B parado)
+  let down = null;
+  for (let i = 0; i < 400 && !down; i++) {
+    clientA.send(JSON.stringify({ type: "input", input: { action: i % 2 ? "jab" : null } }));
+    await wait(50);
+    const st = lastOf(msgsB);
+    if (st && st.state.fighters[1].knockdown) down = st.state.fighters[1].knockdown;
+  }
+  assert(!!down, "B foi nocauteado (vida zerou) e o servidor abriu a contagem");
+  assert(down && down.required >= 8 && down.clicks === 0, `servidor definiu ${down && down.required} cliques necessários para a 1ª queda`);
+  // tentativas de trapaça: mesmo seq repetido, seq absurdo, mensagem com percentual falso, flood
+  for (let i = 0; i < 30; i++) clientB.send(JSON.stringify({ type: "recover", seq: 1 }));
+  clientB.send(JSON.stringify({ type: "recover", seq: 99999 }));
+  clientB.send(JSON.stringify({ type: "recover", seq: 2, clicks: 999, progress: 100 }));
+  clientB.send(JSON.stringify({ type: "input", input: { recoverClicks: 999 } }));
+  for (let i = 3; i < 400; i++) clientB.send(JSON.stringify({ type: "recover", seq: i })); // 400 cliques no mesmo instante
+  await wait(150);
+  const afterCheat = lastOf(msgsB).state.fighters[1].knockdown;
+  assert(afterCheat && afterCheat.clicks <= 3, `cliques forjados/duplicados/em massa não enchem a barra (contou ${afterCheat && afterCheat.clicks})`);
+  // A também vê o progresso oficial de B em tempo real
+  const seenByA = lastOf(msgsA).state.fighters[1].knockdown;
+  assert(seenByA && seenByA.clicks === afterCheat.clicks, "adversário vê o mesmo progresso da barra");
+  // agora B clica de verdade, ~8 por segundo
+  let seq = 100000; // maior que tudo que já foi enviado (o cliente real só incrementa de 1 em 1)
+  for (let i = 0; i < 60; i++) {
+    clientB.send(JSON.stringify({ type: "recover", seq: seq++ }));
+    await wait(125);
+    const st = lastOf(msgsB);
+    if (st && !st.state.fighters[1].knockdown) break;
+  }
+  await wait(150);
+  const rec = lastOf(msgsA).state;
+  assert(!rec.fighters[1].knockdown && rec.phase === "fighting", "B encheu a barra antes do 10 e LEVANTOU; a luta continuou");
+  assert(rec.fighters[1].knockdowns === 1, "servidor registrou 1 queda");
+
+  // 7) Jogador B sai da sala -> A deve ser avisado
   clientB.send(JSON.stringify({ type: "leave" }));
   await wait(300);
   assert(msgsA.some((m) => m.type === "opponentLeft"), "jogador A é avisado quando o oponente sai da sala");

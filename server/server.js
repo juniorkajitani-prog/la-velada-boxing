@@ -11,7 +11,7 @@ const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
 const { CHARACTERS, getCharacter } = require("../shared/characters.js");
-const { createMatchState, stepMatch } = require("../shared/engine.js");
+const { createMatchState, stepMatch, registerRecoveryClick } = require("../shared/engine.js");
 
 // --- Servidor de arquivos estáticos (cliente) -------------------------------------------
 // O próprio processo do servidor multiplayer também serve client/, shared/ e assets/.
@@ -70,7 +70,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "*").split(",").map((s) 
 const TICK_MS = 50; // 20Hz — autoritativo
 const RECONNECT_WINDOW_MS = 25000;
 const ROOM_IDLE_SWEEP_MS = 10 * 60 * 1000; // salas sem atividade há 10min são removidas
-const MAX_MSGS_PER_SEC = 40;
+const MAX_MSGS_PER_SEC = 60; // inputs (~22/s) + cliques de recuperação (até ~16/s) com folga
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem O/0/I/1 para evitar confusão
 
 const rooms = new Map(); // code -> room
@@ -181,6 +181,7 @@ wss.on("connection", (ws, req) => {
   ws._room = null;
   ws._slot = null;
   ws._msgTimes = [];
+  ws._recoverSeq = 0;
 
   ws.on("message", (raw) => {
     const now = Date.now();
@@ -255,6 +256,22 @@ wss.on("connection", (ws, req) => {
         safe.mash = !!inp.mash;
         room.lastInput[ws._slot] = safe;
         room.lastActivity = Date.now();
+        break;
+      }
+      case "recover": {
+        // Clique de recuperação ("LEVANTE-SE!"). O cliente só AVISA que clicou; quem conta,
+        // valida e decide se levantou é o servidor (o percentual da barra nunca vem do cliente).
+        const room = rooms.get(ws._room);
+        if (!room || ws._slot === null || !room.matchState) return;
+        if (room.matchState.phase !== "fighting") return;
+        const seq = msg.seq;
+        // sequência estritamente crescente: descarta repetidos/reenviados/forjados
+        if (!Number.isInteger(seq) || seq <= ws._recoverSeq) return;
+        ws._recoverSeq = seq;
+        const fighter = room.matchState.fighters[ws._slot];
+        // intervalo mínimo entre cliques (anti auto-clicker) é aplicado pelo próprio motor
+        registerRecoveryClick(fighter, now);
+        room.lastActivity = now;
         break;
       }
       case "leave": {

@@ -239,3 +239,82 @@ body.needs-rotate .mobile-controls, body.needs-rotate #fight-canvas { visibility
 .lang-btn.active { opacity: 1; border-color: #ffd400; box-shadow: 0 0 0 2px #ffd400 inset; color: #ffd400; }
 #knockdown-count { display: none; } /* a contagem agora aparece no balão do juiz */
 @media (max-height: 500px) { .knockdown-banner #knockdown-text { display: none; } .knockdown-banner { background: transparent; } }
+
+/* ---------- Recuperação por cliques: "LEVANTE-SE!" ---------- */
+.recover-overlay {
+  position: absolute; inset: 0; z-index: 15; display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(rgba(120,0,0,.12), rgba(60,0,0,.45));
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+.recover-overlay.watching { background: transparent; pointer-events: none; align-items: flex-start; padding-top: 14vh; }
+.rec-box {
+  position: relative; width: min(420px, 88vw); padding: 16px 18px 14px; border-radius: 18px; text-align: center;
+  background: linear-gradient(#1d1a2b, #0f0d17); border: 4px solid #ffd400;
+  box-shadow: 0 0 0 4px #111, 0 12px 40px rgba(0,0,0,.6), 0 0 40px rgba(255,212,0,.25);
+  font-family: "Arial Black", Impact, Arial, sans-serif; color: #fff;
+}
+.recover-overlay.watching .rec-box { transform: scale(.72); transform-origin: top center; opacity: .95; }
+.rec-title { font-size: 34px; color: #ffd400; letter-spacing: 2px; text-shadow: 3px 3px 0 #b3001b; animation: rec-throb .6s ease-in-out infinite alternate; }
+@keyframes rec-throb { from { transform: scale(1); } to { transform: scale(1.06); } }
+.rec-msg { font-size: 12px; color: #ffe9a8; margin: 4px 0 10px; letter-spacing: .5px; }
+.rec-count-badge {
+  position: absolute; top: -22px; right: -18px; width: 62px; height: 62px; border-radius: 50%;
+  background: #e2231a; border: 4px solid #fff; box-shadow: 0 0 0 3px #111; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; line-height: 1;
+}
+.rec-count-badge small { font-size: 7px; letter-spacing: .5px; }
+.rec-count-badge b { font-size: 26px; }
+.rec-count-badge.tick { animation: rec-tick .35s ease-out; }
+@keyframes rec-tick { from { transform: scale(1.35); } to { transform: scale(1); } }
+.rec-thermo-row { display: flex; align-items: center; gap: 10px; }
+.rec-thermo { flex: 1; display: flex; align-items: center; }
+.rec-bulb { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff8a80, #e2231a 60%, #8a0c06); border: 3px solid #fff; z-index: 1; flex: none; }
+.rec-tube { position: relative; flex: 1; height: 22px; margin-left: -6px; border: 3px solid #fff; border-left: none; border-radius: 0 12px 12px 0; background: #2a2638; overflow: hidden; }
+.rec-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: linear-gradient(90deg, #e2231a, #ff8a00 45%, #ffd400 75%, #6cff5a);
+  background-size: 300px 100%; transition: width .12s ease-out;
+}
+.rec-fill.bump { filter: brightness(1.5); }
+.rec-ticks { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), rgba(255,255,255,.35) calc(10% - 2px) 10%); pointer-events: none; }
+.rec-pct { width: 64px; font-size: 22px; color: #ffd400; text-align: right; }
+.rec-clicks { font-size: 11px; color: #bbb; margin-top: 4px; font-family: Arial, sans-serif; }
+.rec-btn {
+  margin-top: 10px; width: 100%; min-height: 64px; border-radius: 16px; border: 4px solid #fff; cursor: pointer;
+  background: radial-gradient(circle at 50% 30%, #ff6b5f, #e2231a 60%, #9d0f08); color: #fff;
+  font-family: "Arial Black", Impact, Arial, sans-serif; font-size: 24px; letter-spacing: 1px;
+  box-shadow: 0 0 0 3px #111, 0 6px 0 #5c0904; touch-action: none; transition: transform .05s ease;
+}
+.rec-btn.pressed { transform: translateY(4px) scale(.97); box-shadow: 0 0 0 3px #111, 0 2px 0 #5c0904; }
+.recover-overlay.watching .rec-btn, .recover-overlay.watching .rec-hint { display: none; }
+.rec-hint { font-size: 10px; color: #999; margin-top: 6px; font-family: Arial, sans-serif; }
+.rec-pop {
+  position: absolute; pointer-events: none; font-family: "Arial Black", Arial, sans-serif; font-size: 22px; color: #ffd400;
+  text-shadow: 2px 2px 0 #111; animation: rec-pop .6s ease-out forwards; z-index: 16;
+}
+@keyframes rec-pop { from { opacity: 1; transform: translate(-50%, 0) scale(1); } to { opacity: 0; transform: translate(-50%, -60px) scale(1.4); } }
+.recover-overlay.shake .rec-box { animation: rec-shake .12s linear; }
+@keyframes rec-shake { 0% { transform: translateX(0); } 33% { transform: translateX(-4px); } 66% { transform: translateX(4px); } 100% { transform: translateX(0); } }
+.recover-toast {
+  position: absolute; top: 34%; left: 50%; transform: translate(-50%, -50%); z-index: 16; pointer-events: none;
+  font-family: "Arial Black", Impact, Arial, sans-serif; font-size: 30px; color: #6cff5a; text-align: center;
+  text-shadow: 3px 3px 0 #111, 0 0 20px rgba(108,255,90,.6); animation: rec-toast .5s ease-out;
+}
+.recover-toast.ko { color: #ff3b3b; text-shadow: 3px 3px 0 #111, 0 0 20px rgba(255,59,59,.7); }
+@keyframes rec-toast { from { transform: translate(-50%, -50%) scale(.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@media (max-height: 420px) {
+  .rec-title { font-size: 24px; } .rec-msg { font-size: 10px; margin-bottom: 6px; }
+  .rec-btn { min-height: 48px; font-size: 18px; margin-top: 6px; } .rec-box { padding: 10px 14px; }
+  .rec-count-badge { width: 50px; height: 50px; top: -16px; right: -12px; } .rec-count-badge b { font-size: 20px; }
+}
+
+/* enquanto o jogador tenta levantar, os botões de luta saem da frente */
+body.rec-active #mobile-controls { visibility: hidden; }
+@media (max-height: 420px) {
+  .recover-overlay { align-items: flex-start; padding-top: 52px; padding-bottom: 0; }
+  .rec-box { width: min(360px, 60vw); }
+  .rec-hint { display: none; }
+}
+.recover-overlay.watching .rec-title { font-size: 22px; line-height: 1.1; animation: none; }
